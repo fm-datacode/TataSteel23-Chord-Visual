@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Chord Diagram</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+</head>
+<body>
+    <div style="text-align: center; font-size: 32px; font-weight: bold; width: 50%;">Tata Steel 2023</div>
+    <script>
+        // Set the dimensions and margins of the diagram
+        const margin = { top: 50, right: 10, bottom: 10, left: 10 },
+            width = 1000 - margin.left - margin.right,
+            height = 1000 - margin.top - margin.bottom;
+
+        // Append the svg object to the body of the page
+        const svg = d3.select("body")
+            .append("svg")
+            .attr("width", width + margin.left + margin.right)
+            .attr("height", height + margin.top + margin.bottom)
+            .append("g")
+            .attr("transform", "translate(" + (width / 2) + "," + (height / 2) + ")");
+
+        // Read data from player list
+        const players = ["Giri, Anish", "Abdusattorov, Nodirbek", "Carlsen, Magnus", "So, Wesley", "Caruana, Fabiano", "Maghsoodloo, Parham", "Aronian, Levon", "Rapport, Richard", "Praggnanandhaa, R", "Van Foreest, Jorden", "Gukesh, D", "Ding, Liren", "Keymer, Vincent", "Erigaisi, Arjun"];
+        const playersTotal = [8.5, 8, 8, 7.5, 7, 7, 6.5, 6.5, 6, 6, 5.5, 5.5, 5, 4];
+        const matrix = [[0, 0.5, 1, 0.5, 0.5, 0.5, 0.5, 1, 0.5, 0.5, 1, 1, 0.5, 0.5],
+        [0.5, 0, 1, 0.5, 0.5, 1, 0.5, 1, 0.5, 0, 0.5, 0.5, 0.5, 1],
+        [0, 0, 0, 0.5, 1, 1, 0.5, 1, 0.5, 0.5, 0.5, 0.5, 1, 1],
+        [0.5, 0.5, 0.5, 0, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 1, 0.5, 1, 0.5],
+        [0.5, 0.5, 0, 0.5, 0, 0.5, 0.5, 0.5, 0.5, 1, 1, 0.5, 0.5, 0.5],
+        [0.5, 0, 0, 0.5, 0.5, 0, 1, 0.5, 1, 1, 0, 0.5, 0.5, 1],
+        [0.5, 0.5, 0.5, 0.5, 0.5, 0, 0, 0.5, 0.5, 0.5, 0.5, 0.5, 1, 0.5],
+        [0, 0, 0, 0.5, 0.5, 0.5, 0.5, 0, 1, 0.5, 0.5, 1, 0.5, 1],
+        [0.5, 0.5, 0.5, 0.5, 0.5, 0, 0.5, 0, 0, 1, 0, 1, 0.5, 0.5],
+        [0.5, 1, 0.5, 0.5, 0, 0, 0.5, 0.5, 0, 0, 0.5, 0.5, 0.5, 1],
+        [0, 0.5, 0.5, 0, 0, 1, 0.5, 0.5, 1, 0.5, 0, 0, 0.5, 0.5],
+        [0, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0, 0, 0.5, 1, 0, 0.5, 0.5],
+        [0.5, 0.5, 0, 0, 0.5, 0.5, 0, 0.5, 0.5, 0.5, 0.5, 0.5, 0, 0.5],
+        [0.5, 0, 0, 0.5, 0.5, 0, 0.5, 0, 0.5, 0, 0.5, 0.5, 0.5, 0]];
+        const n = players.length;
+
+        // Create chord layout
+        const chord = d3.chord()
+            .sortSubgroups(d3.descending)
+            (matrix);
+
+        // Set color scale for players
+        const customColors = ['#e6194B', '#3cb44b', '#ffe119', '#4363d8', '#f58231', '#42d4f4', '#f032e6', '#fabed4', '#469990', '#dcbeff', '#9A6324', '#fffac8', '#800000', '#aaffc3'];
+        const colorScale = d3.scaleOrdinal()
+            .domain(d3.range(n))
+            .range(customColors);
+
+        // Add groups and arcs for players
+        const group = svg.selectAll(".group")
+            .data(chord.groups)
+            .enter()
+            .append("g")
+            .attr("class", "group");
+
+        group.append("path")
+            .style("fill", d => colorScale(d.index))
+            .style("stroke", "#ccc")
+            .attr("d", d3.arc()
+                .innerRadius(300)
+                .outerRadius(320)
+            );
+
+        // Add labels for players
+        group.append("text")
+            .each(d => { d.angle = (d.startAngle + d.endAngle) / 2; })
+            .attr("dy", ".35em")
+            .attr("transform", d => `
+            rotate(${(d.angle * 180 / Math.PI - 90)})
+            translate(${320 + 10})
+            ${d.angle > Math.PI ? "rotate(180)" : ""}
+        `)
+            .style("text-anchor", d => d.angle > Math.PI ? "end" : null)
+            .text(d => players[d.index] + ": " + playersTotal[d.index])
+
+        // Add chords for player matchups
+        // Reverse the chord array to place connections from their last part to the first
+        chord.reverse();
+
+        // Append colored chords last
+        svg.selectAll(".colored-chord")
+            .data(chord.filter(d => matrix[d.source.index][d.target.index] === 1))
+            .enter()
+            .append("path")
+            .attr("class", "chord colored-chord")
+            .attr("d", d3.ribbon()
+                .radius(300)
+            )
+            .style("fill", d => colorScale(d.source.index))
+            .style("stroke", "#ccc");
+    </script>
+</body>
+</html> 
